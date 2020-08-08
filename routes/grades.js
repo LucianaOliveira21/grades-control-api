@@ -16,7 +16,14 @@ router.post("/", async (req, res) => {
 
         const data = JSON.parse(await readFile(global.fileName));
 
-        grade = {id: data.nextId++, student: grade.student, subject: grade.subject, type: grade.type, value: grade.value, timestamp: today};
+        grade = {
+            id: data.nextId++,
+            student: grade.student,
+            subject: grade.subject,
+            type: grade.type,
+            value: grade.value,
+            timestamp: today
+        };
 
         data.grades.push(grade);
 
@@ -59,13 +66,85 @@ router.put("/", async (req, res) => {
    }
 });
 
-router.get("/", async (req, res) => {
+router.delete("/:id", async (req, res) => {
     try {
-        const data = JSON.parse(await readFile(global.fileName));
-        delete data.nextId;
-        res.send(data);
+        const data  = JSON.parse(await readFile(global.fileName));
+        data.grades = data.grades.filter(grade => grade.id !== parseInt(req.params.id));
+
+        const grade = data.grades.find(grade => grade.id === parseInt(id));
+
+        if (!grade) {
+            throw new Error("Registro não encontrado.");
+        }
+
+        await writeFile(global.fileName, JSON.stringify(data, null, 2));
+        res.end();
     } catch (err) {
-        console.log(err);
+        res.status(400).send({error: err.message});
+    }
+});
+
+router.get("/:id", async (req, res) => {
+    try {
+        const data  = JSON.parse(await readFile(global.fileName));
+        const grade = data.grades.find(grade => grade.id === parseInt(req.params.id));
+
+        if (!grade) {
+            throw new Error("Registro não encontrado.");
+        }
+
+        delete grade.nextId;
+        res.send(grade);
+    } catch (err) {
+        res.status(400).send({error: err.message});
+    }
+});
+
+router.get("/total/:student/:subject", async (req, res) => {
+   try {
+       const { student, subject } = req.params;
+
+       if (!student || !subject) {
+           throw new Error("Student e subject não podem ser vazios");
+       }
+
+       const data  = JSON.parse(await readFile(global.fileName));
+
+       const items =  data.grades.filter(grade => grade.student == student && grade.subject == subject);
+
+       if (items.length === 0) {
+           return res.send("Nenhum resultado encontrado.");
+       }
+
+       const sum = items.reduce((acc, curr) => {
+           return acc + curr.value
+       }, 0);
+
+       res.send(`A soma das notas do aluno é ${sum}`);
+   } catch (err) {
+       res.status(400).send({error: err.message});
+   }
+});
+
+router.get("/avg/:subject/:type", async (req, res) => {
+    try {
+        const { subject, type } = req.params;
+
+        if (!subject || !type) {
+            throw new Error("Subject e type não podem ser vazios");
+        }
+
+        const data  = JSON.parse(await readFile(global.fileName));
+
+        const items =  data.grades.filter(grade => grade.subject == subject && grade.type == type);
+
+        const avg = items.reduce((acc, curr) => {
+            return acc + curr.value
+        }, 0)/items.length;
+
+        res.send(`A média é ${avg}`);
+    } catch (err) {
+        res.status(400).send({error: err.message});
     }
 });
 

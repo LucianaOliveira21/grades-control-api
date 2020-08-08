@@ -11,5 +11,5 @@ app.use('/grades', gradesRouter);
 global.fileName = "grades.json";
 
 app.listen(3000, async () => {
-    console.log('ok');
+    console.log('API started!');
 });
